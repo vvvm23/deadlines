@@ -1,0 +1,69 @@
+#!/bin/python
+# Above line is the shebang or bang line. Tells my shell what to run on this source file
+# Without it, I would have to write `python deadlines.py` to run the program
+
+import datetime
+import argparse
+
+# Little static class with no methods. Just to store style strings
+class Style:
+    end = '\x1b[0m'
+    red = '\x1b[91m'
+    yellow = '\x1b[93m'
+    green = '\x1b[92m'
+    blue = '\x1b[34m'
+
+if __name__ == "__main__":
+    # Command-line argument parsing
+    parser = argparse.ArgumentParser(description="Simple Deadline Tracker - Alex McKinney (alexander.f.mckinney@durham.ac.uk)")
+    parser.add_argument('--deadline-file', metavar='Deadline file path', type=str, dest='deadline_path',
+                        default="/home/alex/.local/deadlines",
+                        help="Path to CSV deadline file. Defaults to /home/alex/.local/deadlines")
+    parser.add_argument('--warning-threshold', metavar='Warning threshold value', type=int, dest='warning_threshold',
+                        default=28,
+                        help="Warning threshold value. Default is 28")
+    parser.add_argument('--danger-threshold', metavar='Danger threshold value', type=int, dest='danger_threshold',
+                        default=7,
+                        help="Danger threshold value. Default is 7")
+    parser.add_argument('--no-colour', dest='no_colour', action='store_true',
+                        help="If present, disable colours in output.")
+    args = parser.parse_args()
+
+    # Assert statements to ensure everything makes sense!
+    assert args.danger_threshold < args.warning_threshold, "Danger threshold must be less than warning threshold!"
+
+    # Get lines from file (without \n)
+    f = open(args.deadline_path)
+    deadlines = [tuple(l.split(',')) for l in f.read().splitlines()]
+    f.close()
+
+    # Get todays date!
+    today_date = datetime.date.today()
+
+    print(f"{'' if args.no_colour else Style.blue}-- (*≧▽≦) Upcoming Deadlines (≧▽≦*) --{Style.end}".center(90))
+    # Loop through all found deadlines 
+    for d in deadlines:
+        # Format deadline date into string, then get date object
+        date_string = f"{d[1]}/{d[2]}/{d[3]}"
+        true_date = datetime.datetime.strptime(date_string, "%d/%m/%Y").date()
+
+        # Calculates difference between deadline date and todays date in days
+        delta_date = true_date - today_date
+        days_until = delta_date.days
+
+        # If deadline has passed, no point displaying it. Relax!
+        if days_until < 0:
+            continue
+
+        # Define the printing colour
+        print_color = ''
+        if not args.no_colour:
+            if days_until <= args.danger_threshold:
+                print_color = Style.red
+            elif days_until <= args.warning_threshold:
+                print_color = Style.yellow
+            else:
+                print_color = Style.green
+        
+        # Print the final result
+        print(f"{print_color}{d[0]:50} {d[1]}/{d[2]}/{d[3]}\t({days_until} days remaining){Style.end}")
